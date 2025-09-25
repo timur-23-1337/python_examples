@@ -8,34 +8,31 @@ from PIL import Image,ImageDraw,ImageFont
 #------------------------------------------------------------------------------------------
 API_KEY = ''
 CITY_ID = 
-VERBOSE = False
-url = f"https://api.openweathermap.org/data/2.5/weather?id={CITY_ID}&appid={API_KEY}&units=metric&lang=ru"
+VERBOSE, DEBUG= True,True
+url = f"http://api.openweathermap.org/data/2.5/weather?id={CITY_ID}&appid={API_KEY}&units=metric&lang=ru"
 #------------------------------------------------------------------------------------------
 picdir = "pic"
-libdir = "lib"
 font = "PTSans.ttf"
-if os.path.exists(libdir):
-    sys.path.append(libdir)
-#------------------------------------------------------------------------------------------
 if VERBOSE:
+    log = open('/home/liceybas/weather_monitor.log', 'a+', 1, encoding="utf-8")
+#------------------------------------------------------------------------------------------
+if DEBUG:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.ERROR)
 #------------------------------------------------------------------------------------------
 font_small = ImageFont.truetype(f'{picdir}/fonts/{font}', 32)
 font_big = ImageFont.truetype(f'{picdir}/fonts/{font}', 52)
-font_clock = ImageFont.truetype(f'{picdir}/fonts/Ubuntu.ttf', 96)
+font_clock = ImageFont.truetype(f'{picdir}/fonts/JetBrains.ttf', 74)
 font_rasp = ImageFont.truetype(f'{picdir}/fonts/Ubuntu.ttf', 24)
 prev_temperature = 0.0
 fisrt_start = 1
 first_line, second_line, third_line, fourth_line = -6 , 54, 92, 130
 padding_text_l, padding_text_s = 66, 62
 #------------------------------------------------------------------------------------------
-http_proxy  = "10.0.2.52:3128"
-https_proxy = "10.0.2.52:3128"
 proxies = { 
-              "http"  : http_proxy, 
-              "https" : https_proxy, 
+              "http"  : "10.0.2.52:3128", 
+              "https" : "10.0.2.52:3128", 
             }
 #------------------------------------------------------------------------------------------
 GPIO.setmode(GPIO.BCM)
@@ -88,72 +85,38 @@ schedule = {
 }
 #------------------------------------------------------------------------------------------
 def rasp():
-    clock = datetime.datetime.now()
+    time = datetime.datetime.now()
     if VERBOSE:
-        print(f'VERBOSE: Current time is{clock.hour}:{clock.minute}')
-    if (clock.hour <= 13) or (clock.hour == 13 and clock.minute <= 32):
-        if (clock.hour == 8 and clock.minute >= 0 and clock.minute <= 40):
-            draw.text((6, 2), '>', font = font_rasp, fill = 0)
-        draw.text((24, 2), '8:00 - 8:40', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 8 and clock.minute >= 45) or (clock.hour == 9 and clock.minute <= 25):
-            draw.text((6, 26), '>', font = font_rasp, fill = 0)
-        draw.text((24, 26), '8:45 - 9:25', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 9 and clock.minute >= 35) or (clock.hour == 10 and clock.minute <= 15):
-            draw.text((6, 50), '>', font = font_rasp, fill = 0)
-        draw.text((24, 50), '9:35 - 10:15', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 10 and clock.minute >= 25) or (clock.hour == 11 and clock.minute <= 5):
-            draw.text((6, 74), '>', font = font_rasp, fill = 0)
-        draw.text((24, 74), '10:25 - 11:05', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 11 and clock.minute >= 15 and clock.minute <= 55):
-            draw.text((6, 98), '>', font = font_rasp, fill = 0)
-        draw.text((24, 98), '11:15 - 11:55', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 12 and clock.minute >= 5 and clock.minute <= 45):
-            draw.text((6, 122), '>', font = font_rasp, fill = 0)
-        draw.text((24, 122), '12:05 - 12:45', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 12 and clock.minute >= 50) or (clock.hour == 13 and clock.minute <= 30):
-            draw.text((6, 146), '>', font = font_rasp, fill = 0)
-        draw.text((24, 146), '12:50 - 13:30', font = font_rasp, fill = 0)
-        #---
+        log.write(f'V: Current time is{time.hour}:{time.minute}\n')
+    padding = 2
+    if ((time.hour * 60) + time.minute) > 812:
+        x = 820
+        y = x + 40
+        short_breaks = [0, 5]
     else:
-        if (clock.hour == 13 and clock.minute >= 40) or (clock.hour == 14 and clock.minute <= 20):
-            draw.text((6, 2), '>', font = font_rasp, fill = 0)
-        draw.text((24, 2), '13:40 - 14:20', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 14 and clock.minute >= 30) or (clock.hour == 15 and clock.minute <= 10):
-            draw.text((6, 26), '>', font = font_rasp, fill = 0)
-        draw.text((24, 26), '14:30 - 15:10', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 15 and clock.minute >= 20) or (clock.hour == 16 and clock.minute == 0):
-            draw.text((6, 50), '>', font = font_rasp, fill = 0)
-        draw.text((24, 50), '15:20 - 16:00', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 16 and clock.minute >= 10 and clock.minute <= 50):
-            draw.text((6, 74), '>', font = font_rasp, fill = 0)
-        draw.text((24, 74), '16:10 - 16:50', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 16 and clock.minute >= 55) or (clock.hour == 17 and clock.minute <= 35):
-            draw.text((6, 98), '>', font = font_rasp, fill = 0)
-        draw.text((24, 98), '16:55 - 17:35', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 17 and clock.minute >= 40) or (clock.hour == 18 and clock.minute <= 20):
-            draw.text((6, 122), '>', font = font_rasp, fill = 0)
-        draw.text((24, 122), '17:40 - 18:20', font = font_rasp, fill = 0)
-        #---
-        if (clock.hour == 18 and clock.minute >= 25) or (clock.hour == 19 and clock.minute <= 5):
-            draw.text((6, 146), '>', font = font_rasp, fill = 0)
-        draw.text((24, 146), '18:25 - 19:05', font = font_rasp, fill = 0)
-        #---
+        x = 480
+        y = x + 40
+        short_breaks = [3, 4, 5, 6]
+    for i in range(7):
+        output = ""
+        if ((time.hour * 60) + time.minute) in range(x, y):
+            draw.text((6, padding), '>', font = font_rasp, fill = 0)
+        output += f'0{x // 60}' if (x // 60 < 10) else f'{x // 60}'
+        output += ":"
+        output += f'0{x % 60}' if (x % 60 < 10) else f'{x % 60}'
+        output += " - "
+        output += f'0{y // 60}' if (y // 60 < 10) else f'{y // 60}'
+        output += ":"
+        output += f'0{y % 60}' if (y % 60 < 10) else f'{y % 60}'
+        draw.text((24, padding), output, font = font_rasp, fill = 0)
+        x += 45 if i in short_breaks else 50
+        y = x + 40
+        padding += 24
     epd.display(epd.getbuffer(Himage))
 #------------------------------------------------------------------------------------------
 def init_display():
     if VERBOSE:
-        print("VERBOSE: Display initialized")
+        log.write("V: Display initialized\n")
     epd.init()
     epd.Clear(0xFF)
     global Himage
@@ -164,13 +127,13 @@ def init_display():
 def internet():
     try:
         socket.setdefaulttimeout(3)
-        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("ya.ru", 443))
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("api.openweathermap.org", 80))
         if VERBOSE:
-            print("VERBOSE: Internet connection is available")
+            log.write("V: Internet connection is available\n")
         return True
     except socket.error as ex:
         if VERBOSE:
-            print("VERBOSE: Internet connection is unavailable")
+            log.write("V: Internet connection is unavailable\n")
         return False
 #------------------------------------------------------------------------------------------
 def get_current_event():
@@ -210,8 +173,8 @@ def desk_clock():
             number = number - 7
         draw.text((10, 0), f'Сейчас {number} урок', font = font_small, fill = 0)
         #---
-        if minute == 0:
-            draw.text((10, 102), f'Конец в {hour}:00', font = font_small, fill = 0)
+        if minute < 10:
+            draw.text((10, 102), f'Конец в {hour}:0{minute}', font = font_small, fill = 0)
         else:
             draw.text((10, 102), f'Конец в {hour}:{minute}', font = font_small, fill = 0)
         #---
@@ -224,24 +187,42 @@ def desk_clock():
         minute = end_time % 60
         draw.text((10, 0), 'Сейчас перемена', font = font_small, fill = 0)
         #---
-        if minute == 0:
-            draw.text((10, 102), f'Конец в {hour}:00', font = font_small, fill = 0)
+        if minute < 10:
+            draw.text((10, 102), f'Конец в {hour}:0{minute}', font = font_small, fill = 0)
         else:
             draw.text((10, 102), f'Конец в {hour}:{minute}', font = font_small, fill = 0)
         #---
         draw.text((10, 134), f'Осталось {left} мин.', font = font_small, fill = 0)
     #---
     else:
-        draw.text((10, 16), 'Занятий нет', font = font_small, fill = 0)
+        draw.text((10, 102), 'Занятий нет', font = font_small, fill = 0)
     #---
-    draw.text((8, 22), f'{clock}', font = font_clock, fill = 0)
+    draw.text((8, 24), f'{clock}', font = font_clock, fill = 0)
     if VERBOSE:
-        print("VERBOSE: Current event data is: ", get_current_event())
+        log.write(f'V: Current event data is: {event}\n')
     epd.display(epd.getbuffer(Himage))
+#------------------------------------------------------------------------------------------
+def display_nowifi():
+    global Himage
+    global draw
+    Himage.paste(Image.open(os.path.join(picdir, 'no_wifi.bmp')), (6,2))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
+    draw.text((padding_text_l, first_line), 'Error:', font = font_big, fill = 0)
+#------------------------------------------------------------------------------------------
+def display_error():
+    global Himage
+    global draw
+    Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
+    Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
+    draw.text((padding_text_l, first_line), 'Error:', font = font_big, fill = 0)
 #------------------------------------------------------------------------------------------
 def waiting():
     if VERBOSE:
-        print("VERBOSE: Display is now sleeping")
+        log.write("V: Display is now sleeping\n")
     start_time = time.time()
     while True:
         time.sleep(0.1)
@@ -249,12 +230,12 @@ def waiting():
             #---
             if GPIO.input(5) == GPIO.LOW:
                 if VERBOSE:
-                    print("VERBOSE: Key 1 is pressed")
+                    log.write("V: Key 1 was pressed\n")
                 break
             #---
             elif GPIO.input(6) == GPIO.LOW:
                 if VERBOSE:
-                    print("VERBOSE: Key 2 is pressed")
+                    log.write("V: Key 2 was pressed\n")
                 init_display()
                 desk_clock()
                 epd.sleep()
@@ -263,7 +244,7 @@ def waiting():
             #---
             elif GPIO.input(13) == GPIO.LOW:
                 if VERBOSE:
-                    print("VERBOSE: Key 3 is pressed")
+                    log.write("V: Key 3 was pressed\n")
                 init_display()
                 rasp()
                 epd.sleep()
@@ -272,13 +253,9 @@ def waiting():
             #---
             elif GPIO.input(19) == GPIO.LOW:
                 if VERBOSE:
-                    print("VERBOSE: Key 4 is pressed")
+                    log.write("V: Key 4 was pressed\n")
                 clock = time.strftime("%H:%M")
                 init_display()
-                Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
                 draw.text((padding_text_l, first_line), 'Exit:', font = font_big, fill = 0)
                 draw.text((padding_text_s, second_line), 'Program', font = font_small, fill = 0) 
                 draw.text((padding_text_s, third_line), "ended it's job", font = font_small, fill = 0) 
@@ -293,16 +270,13 @@ epd = epd2in7.EPD()
 Himage = Image.new('1', (epd.height, epd.width), 255)
 draw = ImageDraw.Draw(Himage)
 #------------------------------------------------------------------------------------------
+log.write(str(time.strftime("%d %B %Y, %H:%M\n")))
 try:
     while True:
         init_display()
         #------------------------------------------------------------------------------------------
         if internet() == False:
-            Himage.paste(Image.open(os.path.join(picdir, 'no_wifi.bmp')), (6,2))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
-            draw.text((padding_text_l, first_line), 'Error:', font = font_big, fill = 0)
+            display_nowifi()
             draw.text((padding_text_s, second_line), 'No Wi-Fi', font = font_small, fill = 0) 
             draw.text((padding_text_s, third_line), 'connection', font = font_small, fill = 0) 
             draw.text((padding_text_s, fourth_line), 'available', font = font_small, fill = 0) 
@@ -322,12 +296,9 @@ try:
                 wind_speed = data['wind']['speed']
             else:
                 if VERBOSE:
-                    print("VERBOSE: There was an unknown error")
-                Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
-                Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
-                draw.text((padding_text_l, first_line), 'Error:', font = font_big, fill = 0)
+                    log.write("V: There was an unknown error\n")
+                    log.write(f'Response code was: {response.status_code}\n')
+                display_error()
                 draw.text((padding_text_s, second_line), 'Got bad', font = font_small, fill = 0) 
                 draw.text((padding_text_s, third_line), 'response', font = font_small, fill = 0) 
                 draw.text((padding_text_s, fourth_line), f'code: {response.status_code}', font = font_small, fill = 0) 
@@ -337,12 +308,9 @@ try:
                 continue
         except OSError as e:
             if VERBOSE:
-                print("VERBOSE: There was an OSError")
-            Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,58))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,96))
-            Himage.paste(Image.open(os.path.join(picdir, 'none.bmp')), (22,134))
-            draw.text((padding_text_l, first_line), 'Error:', font = font_big, fill = 0)
+                log.write("V: There was an OSError:\n")
+                log.write(f'{OSError}\n')
+            display_error()
             draw.text((padding_text_s, second_line), 'Got OSError', font = font_small, fill = 0) 
             draw.text((padding_text_s, third_line), 'exception!', font = font_small, fill = 0) 
             draw.text((padding_text_s, fourth_line), '', font = font_small, fill = 0) 
@@ -372,7 +340,7 @@ try:
             Himage.paste(Image.open(os.path.join(picdir, f'{weather_icon}.bmp')), (6,2))
         else:
             if VERBOSE:
-                print(f'VERBOSE: Weather icon is not found for icon id: {weather_icon}')
+                log.write(f'V: Weather icon is not found for icon id: {weather_icon}\n')
             Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
         #------------------------------------------------------------------------------------------
         if fisrt_start == 1:
@@ -404,11 +372,17 @@ try:
         epd.sleep()
         waiting()
         #------------------------------------------------------------------------------------------  
+except KeyboardInterrupt:
+    log.write("V: There was a KeyboardInterrupt\n")
+    exit()
 except IOError as e:
     if VERBOSE:
-        print("VERBOSE: Cleanup GPIO")
+        log.write("V: There was an IOError\n")
+        log.write(f'{IOError}\n')
     #logging.info(e)
 finally:
     if VERBOSE:
-        print("VERBOSE: Cleanup GPIO")
+        log.write("V: Cleanup GPIO\n")
     GPIO.cleanup()
+    epd2in7.epdconfig.module_exit(cleanup=True)
+    log.close()

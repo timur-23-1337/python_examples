@@ -169,7 +169,7 @@ def desk_clock():
         hour = end_time // 60
         minute = end_time % 60
         #---
-        if number > 8:
+        if number > 7:
             number = number - 7
         draw.text((10, 0), f'Сейчас {number} урок', font = font_small, fill = 0)
         #---

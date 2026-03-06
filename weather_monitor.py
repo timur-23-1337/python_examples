@@ -6,10 +6,48 @@ import RPi.GPIO as GPIO
 from waveshare_epd import epd2in7
 from PIL import Image,ImageDraw,ImageFont
 #------------------------------------------------------------------------------------------
-API_KEY = ''
-CITY_ID = 
-VERBOSE, DEBUG= True,True
-url = f"http://api.openweathermap.org/data/2.5/weather?id={CITY_ID}&appid={API_KEY}&units=metric&lang=ru"
+VERBOSE, DEBUG= True, True
+OWM_API = False
+WEATHER_TEXT = {
+    "thunderstorm": "Гроза",
+    "drizzle": "Морось",
+    "rain": "Дождь",
+    "snow": "Снег",
+    "mist": "Туман",
+    "clear": "Ясно",
+    "clouds": "Облач."
+}
+#------------------------------------------------------------------------------------------
+if OWM_API:
+    API_KEY = ''
+    CITY_ID = 
+    url = f"http://api.openweathermap.org/data/2.5/weather?id={CITY_ID}&appid={API_KEY}&units=metric&lang=ru"
+    WEATHER_CODES = {
+        "thunderstorm": [200, 201, 202, 210, 211, 212, 221, 230, 231, 232],
+        "drizzle": [300, 301, 302, 310, 311, 312, 313, 314, 321],
+        "rain": [500, 501, 502, 503, 504, 511, 520, 521, 522, 531],
+        "snow": [600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622],
+        "mist": [701, 711, 721, 731, 741, 751, 761, 762, 771, 781],
+        "clear": [800],
+        "clouds": [801, 802, 803, 804],
+    }
+else:
+    LATITUDE = 56.27
+    LONGITUDE = 54.93
+    url = (
+        f"http://api.open-meteo.com/v1/forecast?"
+        f"latitude={LATITUDE}&longitude={LONGITUDE}"
+        f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
+    )
+    WEATHER_CODES = {
+        "thunderstorm": [95, 96, 99],
+        "drizzle": [51, 53, 55],
+        "rain": [61, 63, 65, 80, 81, 82],
+        "snow": [71, 73, 75, 77, 85, 86],
+        "mist": [45, 48],
+        "clear": [0],
+        "clouds": [1, 2, 3],
+    }
 #------------------------------------------------------------------------------------------
 picdir = "pic"
 font = "PTSans.ttf"
@@ -26,7 +64,7 @@ font_big = ImageFont.truetype(f'{picdir}/fonts/{font}', 52)
 font_clock = ImageFont.truetype(f'{picdir}/fonts/JetBrains.ttf', 74)
 font_rasp = ImageFont.truetype(f'{picdir}/fonts/Ubuntu.ttf', 24)
 prev_temperature = 0.0
-fisrt_start = 1
+first_start = 1
 first_line, second_line, third_line, fourth_line = -6 , 54, 92, 130
 padding_text_l, padding_text_s = 66, 62
 #------------------------------------------------------------------------------------------
@@ -40,14 +78,6 @@ GPIO.setup(5, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(6, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(19, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-#------------------------------------------------------------------------------------------
-thunderstorm = [200, 201, 202, 210, 211, 212, 221, 230, 231, 232]
-drizzle = [300, 301, 302, 310, 311, 312, 313, 314, 321]
-rain = [500, 501, 502, 503, 504, 511, 520, 521, 522, 531]
-snow = [600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622]
-mist = [701, 711, 721, 731, 741, 751, 761, 762, 771, 781]
-clear = [800]
-clouds = [801, 802, 803, 804]
 #------------------------------------------------------------------------------------------
 schedule = {
     'lessons': [
@@ -127,7 +157,10 @@ def init_display():
 def internet():
     try:
         socket.setdefaulttimeout(3)
-        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("api.openweathermap.org", 80))
+        if OWM_API:
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("api.openweathermap.org", 80))
+        else:
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("api.open-meteo.com", 80))
         if VERBOSE:
             log.write("V: Internet connection is available\n")
         return True
@@ -157,6 +190,12 @@ def get_current_event():
             }
     return {'type': 'offtime'}
 #------------------------------------------------------------------------------------------
+def get_weather_type(code):
+    for weather_type, codes in WEATHER_CODES.items():
+        if code in codes:
+            return weather_type
+    return "unknown"
+#------------------------------------------------------------------------------------------   
 def desk_clock():
     clock = time.strftime("%H:%M")
     current_time = datetime.datetime.now()
@@ -270,14 +309,15 @@ epd = epd2in7.EPD()
 Himage = Image.new('1', (epd.height, epd.width), 255)
 draw = ImageDraw.Draw(Himage)
 #------------------------------------------------------------------------------------------
-log.write(str(time.strftime("%d %B %Y, %H:%M\n")))
+if VERBOSE:
+    log.write(str(time.strftime("%d %B %Y, %H:%M\n")))
 try:
     while True:
         init_display()
         #------------------------------------------------------------------------------------------
         if internet() == False:
             display_nowifi()
-            draw.text((padding_text_s, second_line), 'No Wi-Fi', font = font_small, fill = 0) 
+            draw.text((padding_text_s, second_line), 'No internet', font = font_small, fill = 0) 
             draw.text((padding_text_s, third_line), 'connection', font = font_small, fill = 0) 
             draw.text((padding_text_s, fourth_line), 'available', font = font_small, fill = 0) 
             epd.display(epd.getbuffer(Himage))
@@ -286,14 +326,22 @@ try:
             continue
         #---
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=5)
             data = response.json()
             if response.status_code == 200:
-                weather_id = data['weather'][0]['id']
-                weather_icon = data['weather'][0]['icon']
-                temperature = data['main']['temp']
-                humidity = data['main']['humidity']
-                wind_speed = data['wind']['speed']
+                if OWM_API:
+                    weather_id = data['weather'][0]['id']
+                    weather_icon = data['weather'][0]['icon']
+                    temperature = data['main']['temp']
+                    humidity = data['main']['humidity']
+                    wind_speed = data['wind']['speed']
+                else:
+                    current = data['current']
+                    weather_id = int(current['weather_code'])
+                    temperature = current['temperature_2m']
+                    humidity = current['relative_humidity_2m']
+                    wind_speed = current['wind_speed_10m']
+                    weather_icon = "none"
             else:
                 if VERBOSE:
                     log.write("V: There was an unknown error\n")
@@ -319,32 +367,27 @@ try:
             waiting()
             continue
         #------------------------------------------------------------------------------------------
-        if weather_id in thunderstorm:
-            draw.text((padding_text_l, first_line), 'Гроза', font = font_big, fill = 0)
-        elif weather_id in drizzle:
-            draw.text((padding_text_l, first_line), 'Морось', font = font_big, fill = 0)
-        elif weather_id in rain:
-            draw.text((padding_text_l, first_line), 'Дождь', font = font_big, fill = 0)
-        elif weather_id in snow:
-            draw.text((padding_text_l, first_line), 'Снег', font = font_big, fill = 0)
-        elif weather_id in mist:
-            draw.text((padding_text_l, first_line), 'Туман', font = font_big, fill = 0)
-        elif weather_id in clear:
-            draw.text((padding_text_l, first_line), 'Ясно', font = font_big, fill = 0)
-        elif weather_id in clouds:
-            draw.text((padding_text_l, first_line), 'Облач.', font = font_big, fill = 0)
-        else:
-            draw.text((padding_text_l, first_line), 'ERROR', font = font_big, fill = 0)
+        weather = get_weather_type(weather_id)
+        weather_text = WEATHER_TEXT.get(weather, "ERROR")
+        draw.text((padding_text_l, first_line), weather_text, font = font_big, fill = 0)
         #---
-        if os.path.isfile(f'{picdir}/{weather_icon}.bmp'):
-            Himage.paste(Image.open(os.path.join(picdir, f'{weather_icon}.bmp')), (6,2))
+        if OWM_API:
+            if os.path.isfile(f'{picdir}/{weather_icon}.bmp'):
+                Himage.paste(Image.open(os.path.join(picdir, f'{weather_icon}.bmp')), (6,2))
+            else:
+                if VERBOSE:
+                    log.write(f'V: Weather icon is not found for icon id: {weather_icon}\n')
+                Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
         else:
-            if VERBOSE:
-                log.write(f'V: Weather icon is not found for icon id: {weather_icon}\n')
-            Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
+            if os.path.isfile(f'{picdir}/{weather}.bmp'):
+                Himage.paste(Image.open(os.path.join(picdir, f'{weather}.bmp')), (6,2))
+            else:
+                if VERBOSE:
+                    log.write(f'V: Weather icon is not found for weather id: {weather_id}\n')
+                Himage.paste(Image.open(os.path.join(picdir, 'error.bmp')), (6,2))
         #------------------------------------------------------------------------------------------
-        if fisrt_start == 1:
-            fisrt_start = 0
+        if first_start == 1:
+            first_start = 0
             prev_temperature = temperature
         #---
         if prev_temperature < temperature:
@@ -373,7 +416,8 @@ try:
         waiting()
         #------------------------------------------------------------------------------------------  
 except KeyboardInterrupt:
-    log.write("V: There was a KeyboardInterrupt\n")
+    if VERBOSE:
+        log.write("V: There was a KeyboardInterrupt\n")
     exit()
 except IOError as e:
     if VERBOSE:

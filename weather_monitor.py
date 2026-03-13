@@ -117,14 +117,14 @@ schedule = {
 def rasp():
     time = datetime.datetime.now()
     if VERBOSE:
-        log.write(f'V: Current time is{time.hour}:{time.minute}\n')
+        log.write(f'V: Current time is {time.strftime("%H:%M")}\n')
     padding = 2
-    if ((time.hour * 60) + time.minute) > 812:
-        x = 820
+    if ((time.hour * 60) + time.minute) < 812:
+        x = 480
         y = x + 40
         short_breaks = [0, 5]
     else:
-        x = 480
+        x = 820
         y = x + 40
         short_breaks = [3, 4, 5, 6]
     for i in range(7):
